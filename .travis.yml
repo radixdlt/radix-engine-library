@@ -11,12 +11,13 @@ addons:
 jdk:
   - openjdk8
 
+git:
+  depth: false
+
 jobs:
   include:
-#    - stage: check
-#      script: ./gradlew check
     - stage: test
-      script: ./gradlew sonarqube --info --stacktrace
+      script: ./gradlew sonarqube
 
 cache:
   directories:
