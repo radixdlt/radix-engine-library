@@ -320,6 +320,7 @@ final class ConstraintScryptEnv implements SysCalls {
 				@Override
 				public Result precondition(Particle inputParticle, UsedData inputUsed, Particle outputParticle, UsedData outputUsed) {
 					// RRIs must be the same across RRI particle transitions
+					/*
 					if (inputDefinition.getRriMapper() != null && outputDefinition.getRriMapper() != null) {
 						final RRI inputRRI = inputDefinition.getRriMapper().apply(inputParticle);
 						final RRI outputRRI = outputDefinition.getRriMapper().apply(outputParticle);
@@ -327,6 +328,7 @@ final class ConstraintScryptEnv implements SysCalls {
 							return Result.error("Input/Output RRIs not equal");
 						}
 					}
+					*/
 
 					return procedure.precondition((I) inputParticle, (N) inputUsed, (O) outputParticle, (U) outputUsed);
 				}
