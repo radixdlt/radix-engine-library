@@ -14,5 +14,6 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 			t -> Result.success(),
 			AmmParticle::getRRI
 		);
+		os.createTransitionFromRRI(AmmParticle.class);
 	}
 }
