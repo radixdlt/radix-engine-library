@@ -81,6 +81,24 @@ final class ConstraintScryptEnv implements SysCalls {
 		);
 	}
 
+
+	@Override
+	public <T extends Particle> void registerParticle(
+		Class<T> particleClass,
+		Function<T, RadixAddress> mapper,
+		Function<T, Result> staticCheck,
+		Function<T, RRI> rriMapper,
+		boolean allowTransitionsFromOutsideScrypts
+	) {
+		registerParticleMultipleAddresses(
+			particleClass,
+			(T particle) -> Collections.singleton(mapper.apply(particle)),
+			staticCheck,
+			rriMapper,
+			allowTransitionsFromOutsideScrypts
+		);
+	}
+
 	@Override
 	public <T extends Particle> void registerParticle(
 		Class<T> particleClass,
@@ -168,6 +186,53 @@ final class ConstraintScryptEnv implements SysCalls {
 			},
 			rriMapper == null ? null : p -> rriMapper.apply((T) p),
 			false
+		));
+	}
+
+
+	@Override
+	public <T extends Particle> void registerParticleMultipleAddresses(
+		Class<T> particleClass,
+		Function<T, Set<RadixAddress>> mapper,
+		Function<T, Result> staticCheck,
+		Function<T, RRI> rriMapper,
+		boolean allowTransitionsFromOutsideScrypts
+	) {
+		if (particleDefinitionExists(particleClass)) {
+			throw new IllegalStateException("Particle " + particleClass + " is already registered");
+		}
+
+		scryptParticleDefinitions.put(particleClass, new ParticleDefinition<>(
+			p -> mapper.apply((T) p).stream(),
+			p -> {
+				if (rriMapper != null) {
+					final RRI rri = rriMapper.apply((T) p);
+					if (rri == null) {
+						return Result.error("rri cannot be null");
+					}
+
+					final Result rriAddressResult = addressChecker.apply(rri.getAddress());
+					if (rriAddressResult.isError()) {
+						return rriAddressResult;
+					}
+				}
+
+				final Set<RadixAddress> addresses = mapper.apply((T) p);
+				if (addresses.isEmpty()) {
+					return Result.error("address required");
+				}
+
+				for (RadixAddress address : addresses) {
+					Result addressResult = addressChecker.apply(address);
+					if (addressResult.isError()) {
+						return addressResult;
+					}
+				}
+
+				return staticCheck.apply((T) p);
+			},
+			rriMapper == null ? null : p -> rriMapper.apply((T) p),
+			allowTransitionsFromOutsideScrypts
 		));
 	}
 

@@ -44,7 +44,7 @@ public final class CreateFungibleTransitionRoutine<I extends Particle, O extends
 	public static final class UsedAmount implements UsedData {
 		private final UInt256 amount;
 
-		UsedAmount(UInt256 usedAmount) {
+		public UsedAmount(UInt256 usedAmount) {
 			this.amount = Objects.requireNonNull(usedAmount);
 		}
 

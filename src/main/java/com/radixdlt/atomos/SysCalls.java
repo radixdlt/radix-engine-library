@@ -54,6 +54,14 @@ public interface SysCalls extends RoutineCalls {
 		Function<T, RRI> rriMapper
 	);
 
+	<T extends Particle> void registerParticle(
+		Class<T> particleClass,
+		Function<T, RadixAddress> mapper,
+		Function<T, Result> staticCheck,
+		Function<T, RRI> rriMapper,
+		boolean allowTransitionsFromOutsideScrypts
+	);
+
 	/**
 	 * Registers a Particle with a given identifier.
 	 * This is required for all other system calls using the particle.
@@ -80,6 +88,14 @@ public interface SysCalls extends RoutineCalls {
 	);
 
 
+	<T extends Particle> void registerParticleMultipleAddresses(
+		Class<T> particleClass,
+		Function<T, Set<RadixAddress>> mapper,
+		Function<T, Result> staticCheck,
+		Function<T, RRI> rriMapper,
+		boolean allowTransitionsFromOutsideScrypts
+	);
+
 	/**
 	 * Creates a new resource globally identifiable by an RRI.
 	 * @param outputClass particle to be creating from RRI must be a particle registered as rri capable
@@ -96,6 +112,8 @@ public interface SysCalls extends RoutineCalls {
 		Class<U> outputClass1,
 		BiFunction<T, U, Result> combinedCheck
 	);
+
+
 
 	void executeRoutine(ConstraintRoutine routine);
 }

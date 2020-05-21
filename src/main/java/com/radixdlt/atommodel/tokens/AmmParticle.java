@@ -32,4 +32,12 @@ public class AmmParticle extends Particle {
 	public RRI getRRI() {
 		return rri;
 	}
+
+	public RRI getTokenA() {
+		return tokenA;
+	}
+
+	public UInt256 getaAmount() {
+		return aAmount;
+	}
 }

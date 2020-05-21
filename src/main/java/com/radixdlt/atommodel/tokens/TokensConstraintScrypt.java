@@ -60,7 +60,8 @@ public class TokensConstraintScrypt implements ConstraintScrypt {
 			TransferrableTokensParticle.class,
 			TransferrableTokensParticle::getAddress,
 			TokenDefinitionUtils::staticCheck,
-			TransferrableTokensParticle::getTokDefRef
+			TransferrableTokensParticle::getTokDefRef,
+			true
 		);
 
 		// Require Token Definition to be created with unallocated tokens of max supply
