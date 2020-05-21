@@ -274,16 +274,16 @@ public final class ConstraintMachine {
 				if (usedData.isPresent()) {
 					if (prevUsedData != null && prevUsedData.isPresent()) {
 						return Optional.of(
-								new CMError(
-										dp,
-										CMErrorCode.NO_FULL_POP_ERROR,
-										validationState
-										)
-								);
+							new CMError(
+								dp,
+								CMErrorCode.NO_FULL_POP_ERROR,
+								validationState
+							)
+						);
 					}
 
-					if (isInput) {
-						validationState.popAndReplace(nextParticle, true, usedData.get());
+					if (isInput == testInput) {
+						validationState.popAndReplace(nextParticle, isInput, usedData.get());
 					} else {
 						validationState.updateUsed(usedData.get());
 					}
@@ -305,7 +305,7 @@ public final class ConstraintMachine {
 								);
 					}
 
-					if (prevUsedData != null && !prevUsedData.isPresent()) {
+					if (!isInput == testInput || (prevUsedData != null && !prevUsedData.isPresent())) {
 						validationState.pop();
 					}
 				}
