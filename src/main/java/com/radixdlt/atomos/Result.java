@@ -17,7 +17,10 @@
 
 package com.radixdlt.atomos;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -73,6 +76,36 @@ public final class Result {
 		} else {
 			return error(messageIfError);
 		}
+	}
+
+
+	/**
+	 * Combine multiple results into one.
+	 * If all are success, returns success.
+	 * If one or more are error, return combined error messages.
+	 * @param results The results to combine
+	 * @return The combined result
+	 */
+	public static Result combine(Result... results) {
+		return combine(Stream.of(results));
+	}
+
+	/**
+	 * Combine multiple results into one.
+	 * If all are success, returns success.
+	 * If one or more are error, return combined error messages.
+	 * @param results The results to combine
+	 * @return The combined result
+	 */
+	public static Result combine(Stream<Result> results) {
+		Objects.requireNonNull(results, "results is required");
+
+		String error = results
+			.filter(Result::isError)
+			.map(Result::getErrorMessage)
+			.collect(Collectors.joining(", "));
+
+		return Result.of(error.isEmpty(), error);
 	}
 
 	/**

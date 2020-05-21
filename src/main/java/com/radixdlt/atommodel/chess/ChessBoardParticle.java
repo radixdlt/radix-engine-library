@@ -43,6 +43,10 @@ public final class ChessBoardParticle extends Particle {
 	@DsonOutput(DsonOutput.Output.ALL)
 	private boolean lastMoveWhite;
 
+	@JsonProperty("lastMove")
+	@DsonOutput(DsonOutput.Output.ALL)
+	private String lastMove;
+
 	private ChessBoardParticle() {
 		// for serializer
 	}
@@ -55,7 +59,8 @@ public final class ChessBoardParticle extends Particle {
 		RadixAddress blackAddress,
 		String gameId,
 		long nonce,
-		boolean lastMoveWhite
+		boolean lastMoveWhite,
+		String lastMove
 	) {
 		this.boardStateFen = boardStateFen;
 		this.gameState = gameState;
@@ -65,6 +70,7 @@ public final class ChessBoardParticle extends Particle {
 		this.gameId = gameId;
 		this.nonce = nonce;
 		this.lastMoveWhite = lastMoveWhite;
+		this.lastMove = lastMove;
 	}
 
 	public RadixAddress getGameAddress() {
@@ -89,6 +95,10 @@ public final class ChessBoardParticle extends Particle {
 
 	public boolean isLastMoveWhite() {
 		return lastMoveWhite;
+	}
+
+	public String getLastMove() {
+		return lastMove;
 	}
 
 	public GameState getGameState() {
@@ -155,7 +165,9 @@ public final class ChessBoardParticle extends Particle {
 			RadixAddress.from("JH1P8f3znbyrDj8F4RWpix7hRkgxqHjdW2fNnKpR3v6ufXnknor"),
 			UUID.randomUUID().toString(),
 			42,
-			false);
+			false,
+			"f6f7"
+		);
 		String json = serialization.toJson(particle, DsonOutput.Output.ALL);
 		System.out.println(json);
 	}
