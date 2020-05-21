@@ -233,10 +233,9 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 				@Override
 				public Result precondition(AmmParticle inputParticle, VoidUsedData inputUsed, AmmParticle outputParticle, VoidUsedData outputUsed) {
 					UInt256 invariant = inputParticle.getaAmount().multiply(inputParticle.getbAmount());
-					UInt256 nextInvariant = outputParticle.getaAmount().multiply(outputParticle.getbAmount());
-
-					if (!invariant.equals(nextInvariant)) {
-						return Result.error("Invariant broken: current " + invariant + " next " + nextInvariant);
+					if (!invariant.divide(outputParticle.getbAmount()).equals(outputParticle.getaAmount())) {
+						return Result.error("Invariant broken: expected " + invariant.divide(outputParticle.getbAmount()) + " but was "
+							 + outputParticle.getaAmount());
 					}
 
 					return inputParticle.getRRI().equals(outputParticle.getRRI())
