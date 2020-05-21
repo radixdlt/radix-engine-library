@@ -9,7 +9,10 @@ import com.radixdlt.serialization.Serialization;
 import com.radixdlt.serialization.SerializationException;
 import com.radixdlt.serialization.SerializerId2;
 
+import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @SerializerId2("radix.particles.chess2.board")
 public final class ChessBoardParticle extends Particle {
@@ -113,7 +116,7 @@ public final class ChessBoardParticle extends Particle {
 
 	@JsonProperty("gameState")
 	private void setJsonPermissions(String state) {
-		this.gameState = GameState.valueOf(state);
+		this.gameState = GameState.from(state);
 	}
 
 	@Override
@@ -152,6 +155,17 @@ public final class ChessBoardParticle extends Particle {
 
 		public boolean isInitial() {
 			return this == INITIAL;
+		}
+
+		public static GameState from(String name) {
+			Map<String, GameState> statesByName = Arrays.stream(values())
+				.collect(Collectors.toMap(state -> state.name, state -> state));
+
+			if (!statesByName.containsKey(name)) {
+				throw new IllegalStateException("Unknown game state '" + name + "', ");
+			}
+
+			return statesByName.get(name);
 		}
 	}
 

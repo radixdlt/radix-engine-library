@@ -156,7 +156,18 @@ public class ChessParticleConstraintScrypt implements ConstraintScrypt {
 	}
 
 	private static Result staticCheck(ChessBoardParticle board) {
-		// TODO static check other board params (e.g. not null)
-		return checkBoardFormat(board.getBoardStateFen());
+		Result result = Result.combine(
+			Result.of(board.getBoardStateFen() != null, "boardStateFen is null"),
+			Result.of(board.getGameState() != null, "gameState is null"),
+			Result.of(board.getGameAddress() != null, "gameAddress is null"),
+			Result.of(board.getWhiteAddress() != null, "whiteAddress is null"),
+			Result.of(board.getBlackAddress() != null, "blackAddress is null"),
+			Result.of(board.getGameId() != null, "gameId is null"),
+			Result.of(board.getLastMove() != null, "gameId is null")
+		);
+		if (!result.isError()) {
+			result = checkBoardFormat(board.getBoardStateFen());
+		}
+		return result;
 	}
 }
