@@ -163,7 +163,7 @@ public class ChessParticleConstraintScrypt implements ConstraintScrypt {
 			Result.of(board.getWhiteAddress() != null, "whiteAddress is null"),
 			Result.of(board.getBlackAddress() != null, "blackAddress is null"),
 			Result.of(board.getGameId() != null, "gameId is null"),
-			Result.of(board.getLastMove() != null, "gameId is null")
+			Result.of(board.getLastMove() != null || board.getGameState() == ChessBoardParticle.GameState.INITIAL, "lastMove is null")
 		);
 		if (!result.isError()) {
 			result = checkBoardFormat(board.getBoardStateFen());
