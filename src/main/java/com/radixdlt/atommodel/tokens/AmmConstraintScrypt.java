@@ -225,14 +225,22 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 			new TransitionToken<>(AmmParticle.class, TypeToken.of(VoidUsedData.class), AmmParticle.class, TypeToken.of(VoidUsedData.class)),
 			new TransitionProcedure<AmmParticle, VoidUsedData, AmmParticle, VoidUsedData>() {
 				@Override
-				public Result precondition(AmmParticle inputParticle, VoidUsedData inputUsed, AmmParticle outputParticle, VoidUsedData outputUsed) {
-					UInt256 invariant = inputParticle.getaAmount().multiply(inputParticle.getbAmount());
-					if (!invariant.divide(outputParticle.getbAmount()).equals(outputParticle.getaAmount())) {
-						return Result.error("Invariant broken: expected " + invariant.divide(outputParticle.getbAmount()) + " but was "
-							 + outputParticle.getaAmount());
+				public Result precondition(AmmParticle input, VoidUsedData inputUsed, AmmParticle output, VoidUsedData outputUsed) {
+					UInt256 invariant = input.getaAmount().multiply(input.getbAmount());
+
+					if (output.getaAmount().compareTo(input.getaAmount()) >= 0) { // Swap: A -> B
+						if (!invariant.divide(output.getaAmount()).equals(output.getbAmount())) {
+							return Result.error("Invariant broken: expected b amount to be " + invariant.divide(output.getaAmount()) + " but was "
+								 + output.getbAmount());
+						}
+					} else {
+						if (!invariant.divide(output.getbAmount()).equals(output.getaAmount())) {
+							return Result.error("Invariant broken: expected a amount to be " + invariant.divide(output.getbAmount()) + " but was "
+								 + output.getaAmount());
+						}
 					}
 
-					return inputParticle.getRRI().equals(outputParticle.getRRI())
+					return input.getRRI().equals(output.getRRI())
 						? Result.success() : Result.error("Wrong token Type");
 				}
 
