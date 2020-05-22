@@ -313,7 +313,7 @@ public final class ConstraintMachine {
 				}
 
 
-				System.out.println(nextParticle + " " + isInput + " " + testInput + " " + usedData + " " + validationState);
+				System.out.println(nextParticle + " " + isInput + " " + testInput + " " + usedData);
 
 				prevUsedData = usedData;
 			} catch (ArithmeticException e) {
