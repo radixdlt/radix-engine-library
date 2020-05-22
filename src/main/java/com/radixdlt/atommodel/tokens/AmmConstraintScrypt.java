@@ -339,7 +339,7 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 				public UsedCompute<TransferrableTokensParticle, SwapUsedAmount, TransferrableTokensParticle, VoidUsedData> inputUsedCompute() {
 					return (input, inputUsed, output, outputUsed) -> {
 						UInt256 totalInput = inputUsed.swapUsed.add(output.getAmount());
-						if (totalInput.compareTo(inputUsed.swapRequired) <= 0) {
+						if (totalInput.compareTo(inputUsed.swapRequired) < 0) {
 							return Optional.of(new SwapUsedAmount(inputUsed.rri, totalInput, inputUsed.swapRequired));
 						} else {
 							return Optional.empty();
