@@ -131,7 +131,7 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 
 		@Override
 		public String toString() {
-			return " sent " + rri + " " + swapUsed + " " + swapRequired;
+			return rri + " " + swapUsed + "/" + swapRequired + " (" + swapUsed.compareTo(swapRequired) + ")";
 		}
 	}
 
