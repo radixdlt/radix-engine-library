@@ -307,7 +307,7 @@ public final class ConstraintMachine {
 						);
 					}
 
-					if (!isInput == testInput || (prevUsedData != null && !prevUsedData.isPresent())) {
+					if (prevUsedData != null && !prevUsedData.isPresent()) {
 						validationState.pop();
 					}
 				}
