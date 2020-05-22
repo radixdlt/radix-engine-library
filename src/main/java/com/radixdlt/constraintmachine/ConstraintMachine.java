@@ -271,6 +271,9 @@ public final class ConstraintMachine {
 
 			try {
 				final Optional<UsedData> usedData = usedCompute.compute(inputParticle, inputUsed, outputParticle, outputUsed);
+
+				System.out.println(testInput + " " + inputParticle + " " + outputParticle + " " + usedData);
+
 				if (usedData.isPresent()) {
 					if (prevUsedData != null && prevUsedData.isPresent()) {
 						return Optional.of(
@@ -296,13 +299,13 @@ public final class ConstraintMachine {
 
 					if (inputWitness.isError()) {
 						return Optional.of(
-								new CMError(
-										dp,
-										CMErrorCode.WITNESS_ERROR,
-										validationState,
-										inputWitness.getErrorMessage()
-										)
-								);
+							new CMError(
+								dp,
+								CMErrorCode.WITNESS_ERROR,
+								validationState,
+								inputWitness.getErrorMessage()
+							)
+						);
 					}
 
 					if (!isInput == testInput || (prevUsedData != null && !prevUsedData.isPresent())) {
