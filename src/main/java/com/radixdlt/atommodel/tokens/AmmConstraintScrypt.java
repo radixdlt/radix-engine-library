@@ -109,7 +109,7 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 
 		@Override
 		public TypeToken<? extends UsedData> getTypeToken() {
-			return TypeToken.of(SwapSentReceivedUsedAmount.class);
+			return TypeToken.of(SwapUsedAmount.class);
 		}
 
 		@Override
