@@ -59,27 +59,62 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 		}
 	}
 
-	public static final class SwapUsedAmount implements UsedData {
-		private final RRI rriSend;
-		private final UInt256 swapSent;
-		private final RRI rriReceive;
-		private final UInt256 swapReceive;
+	public static final class SwapSentReceivedUsedAmount implements UsedData {
+		private final SwapUsedAmount send;
+		private final SwapUsedAmount receive;
 
-		public SwapUsedAmount(RRI rriSend, UInt256 swapSent, RRI rriReceive, UInt256 swapReceive) {
-			this.rriSend = rriSend;
-			this.rriReceive = rriReceive;
-			this.swapSent = swapSent;
-			this.swapReceive = swapReceive;
+		public SwapSentReceivedUsedAmount(SwapUsedAmount send, SwapUsedAmount receive) {
+			this.send = send;
+			this.receive = receive;
 		}
 
 		@Override
 		public TypeToken<? extends UsedData> getTypeToken() {
-			return TypeToken.of(SwapUsedAmount.class);
+			return TypeToken.of(SwapSentReceivedUsedAmount.class);
 		}
 
 		@Override
 		public int hashCode() {
-			return Objects.hash(swapReceive, swapSent, rriReceive, rriSend);
+			return Objects.hash(send, receive);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (!(obj instanceof SwapSentReceivedUsedAmount)) {
+				return false;
+			}
+
+			SwapSentReceivedUsedAmount u = (SwapSentReceivedUsedAmount) obj;
+			return Objects.equals(this.send, u.send)
+				&& Objects.equals(this.receive, u.receive);
+		}
+
+		@Override
+		public String toString() {
+			return "send " + send + " receive " + receive;
+		}
+	}
+
+
+	public static final class SwapUsedAmount implements UsedData {
+		private final RRI rri;
+		private final UInt256 swapUsed;
+		private final UInt256 swapRequired;
+
+		public SwapUsedAmount(RRI rri, UInt256 swapUsed, UInt256 swapRequired) {
+			this.rri = rri;
+			this.swapUsed = swapUsed;
+			this.swapRequired = swapRequired;
+		}
+
+		@Override
+		public TypeToken<? extends UsedData> getTypeToken() {
+			return TypeToken.of(SwapSentReceivedUsedAmount.class);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(rri, swapUsed, swapRequired);
 		}
 
 		@Override
@@ -89,55 +124,14 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 			}
 
 			SwapUsedAmount u = (SwapUsedAmount) obj;
-			return Objects.equals(this.swapReceive, u.swapReceive)
-				&& Objects.equals(this.swapSent, u.swapSent)
-				&& Objects.equals(this.rriReceive, u.rriReceive)
-				&& Objects.equals(this.rriSend, u.rriSend);
-		}
-
-		@Override
-		public String toString() {
-			return "sent " + swapSent + " " + rriSend + " receive " + swapReceive + " " + rriReceive;
-		}
-	}
-
-
-	public static final class SwapSentAmount implements UsedData {
-		private final RRI rriSent;
-		private final UInt256 swapSent;
-		private final UInt256 swapRequired;
-
-		public SwapSentAmount(RRI rriSent, UInt256 swapSent, UInt256 swapRequired) {
-			this.rriSent = rriSent;
-			this.swapSent = swapSent;
-			this.swapRequired = swapRequired;
-		}
-
-		@Override
-		public TypeToken<? extends UsedData> getTypeToken() {
-			return TypeToken.of(SwapUsedAmount.class);
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(rriSent, swapSent, swapRequired);
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (!(obj instanceof SwapSentAmount)) {
-				return false;
-			}
-
-			SwapSentAmount u = (SwapSentAmount) obj;
-			return Objects.equals(this.rriSent, u.rriSent)
-				&& Objects.equals(this.swapSent, u.swapSent)
+			return Objects.equals(this.rri, u.rri)
+				&& Objects.equals(this.swapUsed, u.swapUsed)
 				&& Objects.equals(this.swapRequired, u.swapRequired);
 		}
 
 		@Override
 		public String toString() {
-			return " sent " + rriSent + " " + swapSent + " " + swapRequired;
+			return " sent " + rri + " " + swapUsed + " " + swapRequired;
 		}
 	}
 
@@ -244,29 +238,29 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 
 				@Override
 				public UsedCompute<AmmParticle, VoidUsedData, AmmParticle, VoidUsedData> inputUsedCompute() {
-					return (input, inputUsed, output, outputUsed) -> {
-						// Swap: A -> B
-						if (output.getaAmount().compareTo(input.getaAmount()) >= 0) {
-							return Optional.of(new SwapUsedAmount(
-								output.getTokenA(),
-								output.getaAmount().subtract(input.getaAmount()),
-								output.getTokenB(),
-								input.getbAmount().subtract(output.getbAmount())
-							));
-						} else {
-							return Optional.of(new SwapUsedAmount(
-								output.getTokenB(),
-								input.getaAmount().subtract(output.getaAmount()),
-								output.getTokenA(),
-								output.getbAmount().subtract(input.getbAmount())
-							));
-						}
-					};
+					return (input, inputUsed, output, outputUsed) -> Optional.empty();
 				}
 
 				@Override
 				public UsedCompute<AmmParticle, VoidUsedData, AmmParticle, VoidUsedData> outputUsedCompute() {
-					return (input, inputUsed, output, outputUsed) -> Optional.empty();
+					return (input, inputUsed, output, outputUsed) -> {
+						final SwapUsedAmount send;
+						final SwapUsedAmount receive;
+
+
+						if (output.getaAmount().compareTo(input.getaAmount()) >= 0) { // Swap: A -> B
+							send = new SwapUsedAmount(output.getTokenA(), UInt256.ZERO, output.getaAmount().subtract(input.getaAmount()));
+							receive = new SwapUsedAmount(output.getTokenB(), UInt256.ZERO, input.getbAmount().subtract(output.getbAmount()));
+
+						} else {
+							send = new SwapUsedAmount(output.getTokenB(), UInt256.ZERO, output.getbAmount().subtract(input.getbAmount()));
+							receive = new SwapUsedAmount(output.getTokenA(), UInt256.ZERO, input.getaAmount().subtract(output.getaAmount()));
+						}
+
+						return Optional.of(new SwapSentReceivedUsedAmount(
+							send, receive
+						));
+					};
 				}
 
 				@Override
@@ -282,79 +276,86 @@ public class AmmConstraintScrypt  implements ConstraintScrypt {
 		);
 
 		os.createTransition(
-			new TransitionToken<>(AmmParticle.class, TypeToken.of(SwapUsedAmount.class), TransferrableTokensParticle.class, TypeToken.of(VoidUsedData.class)),
-			new TransitionProcedure<AmmParticle, SwapUsedAmount, TransferrableTokensParticle, VoidUsedData>() {
+			new TransitionToken<>(TransferrableTokensParticle.class, TypeToken.of(VoidUsedData.class), AmmParticle.class, TypeToken.of(SwapSentReceivedUsedAmount.class)),
+			new TransitionProcedure<TransferrableTokensParticle, VoidUsedData, AmmParticle, SwapSentReceivedUsedAmount>() {
 				@Override
-				public Result precondition(AmmParticle inputParticle, SwapUsedAmount inputUsed, TransferrableTokensParticle outputParticle, VoidUsedData outputUsed) {
-					return outputParticle.getTokDefRef().equals(inputUsed.rriReceive)
+				public Result precondition(TransferrableTokensParticle inputParticle, VoidUsedData inputUsed, AmmParticle outputParticle, SwapSentReceivedUsedAmount outputUsed) {
+					return inputParticle.getTokDefRef().equals(outputUsed.send.rri)
 						? Result.success() : Result.error("Wrong token Type");
 				}
 
 				@Override
-				public UsedCompute<AmmParticle, SwapUsedAmount, TransferrableTokensParticle, VoidUsedData> inputUsedCompute() {
+				public UsedCompute<TransferrableTokensParticle, VoidUsedData, AmmParticle, SwapSentReceivedUsedAmount> inputUsedCompute() {
 					return (input, inputUsed, output, outputUsed) -> {
-						if (inputUsed.swapReceive.compareTo(output.getAmount()) >= 0) {
+						UInt256 totalInput = outputUsed.send.swapUsed.add(input.getAmount());
+						if (totalInput.compareTo(outputUsed.send.swapRequired) >= 0) {
+							return Optional.of(outputUsed.receive);
+						} else {
+							return Optional.empty();
+						}
+					};
+				}
+
+				@Override
+				public UsedCompute<TransferrableTokensParticle, VoidUsedData, AmmParticle, SwapSentReceivedUsedAmount> outputUsedCompute() {
+					return (input, inputUsed, output, outputUsed) -> {
+						UInt256 totalInput = outputUsed.send.swapUsed.add(input.getAmount());
+						if (totalInput.compareTo(outputUsed.send.swapRequired) >= 0) {
 							return Optional.empty();
 						} else {
-							return Optional.of(new SwapUsedAmount(inputUsed.rriSend, inputUsed.swapSent, inputUsed.rriReceive,
-								inputUsed.swapReceive.subtract(output.getAmount())));
+							return Optional.of(
+								new SwapSentReceivedUsedAmount(
+									new SwapUsedAmount(outputUsed.send.rri, totalInput, outputUsed.send.swapRequired),
+									outputUsed.receive
+								)
+							);
 						}
 					};
 				}
 
 				@Override
-				public UsedCompute<AmmParticle, SwapUsedAmount, TransferrableTokensParticle, VoidUsedData> outputUsedCompute() {
-					return (input, inputUsed, output, outputUsed) -> {
-						if (inputUsed.swapReceive.compareTo(output.getAmount()) >= 0) {
-							return Optional.of(new SwapSentAmount(inputUsed.rriSend, UInt256.ZERO, inputUsed.swapSent));
-						} else {
-							return Optional.of(new SwapUsedAmount(inputUsed.rriSend, inputUsed.swapSent, inputUsed.rriReceive,
-								inputUsed.swapReceive.subtract(output.getAmount())));
-						}
-					};
+				public WitnessValidator<TransferrableTokensParticle> inputWitnessValidator() {
+					return (input, witnessData) -> witnessData.isSignedBy(input.getAddress().getPublicKey())
+						? WitnessValidatorResult.success() : WitnessValidatorResult.error("Not signed by " + input.getAddress());
 				}
 
 				@Override
-				public WitnessValidator<AmmParticle> inputWitnessValidator() {
-					return (o, witnessData) -> WitnessValidatorResult.success();
-				}
-
-				@Override
-				public WitnessValidator<TransferrableTokensParticle> outputWitnessValidator() {
+				public WitnessValidator<AmmParticle> outputWitnessValidator() {
 					return (o, witnessData) -> WitnessValidatorResult.success();
 				}
 			}
 		);
 
 		os.createTransition(
-			new TransitionToken<>(TransferrableTokensParticle.class, TypeToken.of(VoidUsedData.class), TransferrableTokensParticle.class, TypeToken.of(SwapSentAmount.class)),
-			new TransitionProcedure<TransferrableTokensParticle, VoidUsedData, TransferrableTokensParticle, SwapSentAmount>() {
+			new TransitionToken<>(TransferrableTokensParticle.class, TypeToken.of(SwapUsedAmount.class), TransferrableTokensParticle.class, TypeToken.of(VoidUsedData.class)),
+			new TransitionProcedure<TransferrableTokensParticle, SwapUsedAmount, TransferrableTokensParticle, VoidUsedData>() {
 				@Override
-				public Result precondition(TransferrableTokensParticle inputParticle, VoidUsedData inputUsed, TransferrableTokensParticle outputParticle, SwapSentAmount outputUsed) {
-					return inputParticle.getTokDefRef().equals(outputUsed.rriSent)
+				public Result precondition(TransferrableTokensParticle inputParticle, SwapUsedAmount inputUsed, TransferrableTokensParticle outputParticle, VoidUsedData outputUsed) {
+					return outputParticle.getTokDefRef().equals(inputUsed.rri)
 						? Result.success() : Result.error("Wrong token Type");
 				}
 
 				@Override
-				public UsedCompute<TransferrableTokensParticle, VoidUsedData, TransferrableTokensParticle, SwapSentAmount> inputUsedCompute() {
+				public UsedCompute<TransferrableTokensParticle, SwapUsedAmount, TransferrableTokensParticle, VoidUsedData> inputUsedCompute() {
 					return (input, inputUsed, output, outputUsed) -> {
-						UInt256 totalInput = input.getAmount().add(outputUsed.swapSent);
-						if (totalInput.compareTo(outputUsed.swapRequired) <= 0) {
-							return Optional.empty();
+						UInt256 totalInput = inputUsed.swapUsed.add(output.getAmount());
+						if (totalInput.compareTo(inputUsed.swapRequired) <= 0) {
+							return Optional.of(new SwapUsedAmount(inputUsed.rri, totalInput, inputUsed.swapRequired));
 						} else {
-							return Optional.of(new CreateFungibleTransitionRoutine.UsedAmount(totalInput.subtract(outputUsed.swapRequired)));
+							return Optional.empty();
 						}
 					};
 				}
 
 				@Override
-				public UsedCompute<TransferrableTokensParticle, VoidUsedData, TransferrableTokensParticle, SwapSentAmount> outputUsedCompute() {
+				public UsedCompute<TransferrableTokensParticle, SwapUsedAmount, TransferrableTokensParticle, VoidUsedData> outputUsedCompute() {
 					return (input, inputUsed, output, outputUsed) -> {
-						UInt256 totalInput = input.getAmount().add(outputUsed.swapSent);
-						if (totalInput.compareTo(outputUsed.swapRequired) >= 0) {
+						UInt256 totalInput = inputUsed.swapUsed.add(output.getAmount());
+						if (totalInput.compareTo(inputUsed.swapRequired) <= 0) {
 							return Optional.empty();
 						} else {
-							return Optional.of(new SwapSentAmount(outputUsed.rriSent, totalInput, outputUsed.swapRequired));
+							// Taking out more than should
+							return Optional.of(new SwapUsedAmount(inputUsed.rri, totalInput, inputUsed.swapRequired));
 						}
 					};
 				}
