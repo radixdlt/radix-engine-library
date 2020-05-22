@@ -272,7 +272,6 @@ public final class ConstraintMachine {
 			try {
 				final Optional<UsedData> usedData = usedCompute.compute(inputParticle, inputUsed, outputParticle, outputUsed);
 
-				System.out.println(testInput + " " + inputParticle + " " + outputParticle + " " + usedData);
 
 				if (usedData.isPresent()) {
 					if (prevUsedData != null && prevUsedData.isPresent()) {
@@ -312,6 +311,10 @@ public final class ConstraintMachine {
 						validationState.pop();
 					}
 				}
+
+
+				System.out.println(nextParticle + " " + isInput + " " + testInput + " " + usedData + " " + validationState);
+
 				prevUsedData = usedData;
 			} catch (ArithmeticException e) {
 				return Optional.of(new CMError(dp, CMErrorCode.ARITHMETIC_ERROR, validationState, e.getMessage()));
