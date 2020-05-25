@@ -51,13 +51,14 @@ public class CRUDataConstraintScrypt implements ConstraintScrypt {
 				.build()
 		);
 
-		// FIXME: Could possibly also be done more simply with virtualised empty up.
-
 		// Create with RRIParticle
 		os.createTransitionFromRRI(CRUDataParticle.class);
 
 		// Update with new CRUDataParticle
-		createTransition(os);
+		os.createTransition(
+			new TransitionToken<>(CRUDataParticle.class, TypeToken.of(VoidUsedData.class), CRUDataParticle.class, TypeToken.of(VoidUsedData.class)),
+			new CRUTransitionProcedure()
+		);
 	}
 
 	private static RadixAddress getAddress(CRUDataParticle p) {
@@ -70,35 +71,28 @@ public class CRUDataConstraintScrypt implements ConstraintScrypt {
 		return p -> addressMapper.apply(p) == null ? Result.error("RRI is invalid") : Result.success();
 	}
 
-	private void createTransition(SysCalls os) {
-		os.createTransition(
-			new TransitionToken<>(CRUDataParticle.class, TypeToken.of(VoidUsedData.class), CRUDataParticle.class, TypeToken.of(VoidUsedData.class)),
-			new CRUTransitionProcedure()
-		);
-	}
-
 	@VisibleForTesting
 	static class CRUTransitionProcedure implements TransitionProcedure<CRUDataParticle, VoidUsedData, CRUDataParticle, VoidUsedData> {
 
 		@Override
 		public Result precondition(CRUDataParticle inputParticle, VoidUsedData inputUsed, CRUDataParticle outputParticle, VoidUsedData outputUsed) {
-			RRI inputRri = inputParticle.rri();
-			RRI outputRri = outputParticle.rri();
 			// ensure transition is between CRU particles with same RRI
-			if (!Objects.equals(inputRri, outputRri)) {
+			if (!Objects.equals(inputParticle.rri(), outputParticle.rri())) {
 				return Result.error(String.format(
 					"CRU RRIs do not match: %s != %s",
-					inputRri, outputRri
+					inputParticle.rri(), outputParticle.rri()
 				));
 			}
 
 			// ensure serialno is incremented on update
 			if (inputParticle.serialno() + 1 != outputParticle.serialno()) {
 				return Result.error(
-					String.format("output serialno must be input serialno + 1, but %s != %s + 1", outputParticle.serialno(), inputParticle.serialno())
+					String.format(
+						"output serialno must be input serialno + 1, but %s != %s + 1",
+						outputParticle.serialno(), inputParticle.serialno()
+					)
 				);
 			}
-
 			return Result.success();
 		}
 
@@ -114,13 +108,12 @@ public class CRUDataConstraintScrypt implements ConstraintScrypt {
 
 		@Override
 		public WitnessValidator<CRUDataParticle> inputWitnessValidator() {
-			// verify that the transition was authenticated by the validator address in question
+			// verify that the transition was signed by the owner
 			return (i, meta) -> {
-				RRI rri = i.rri();
-				RadixAddress address = rri == null ? null : rri.getAddress();
+				RadixAddress address = getAddress(i);
 				return address != null && meta.isSignedBy(address.getPublicKey())
 					? WitnessValidatorResult.success()
-					: WitnessValidatorResult.error(String.format("CRU %s not signed", rri));
+					: WitnessValidatorResult.error(String.format("CRU %s not signed", i.rri()));
 			};
 		}
 

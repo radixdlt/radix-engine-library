@@ -29,7 +29,7 @@ import java.util.Objects;
 import javax.annotation.concurrent.Immutable;
 
 /**
- * Particle representing a fixed supply token definition
+ * Particle representing data that can be created, read and updated.
  */
 @Immutable
 @SerializerId2("radix.particles.cru")
@@ -50,7 +50,6 @@ public final class CRUDataParticle extends Particle {
 	@JsonProperty("data")
 	@DsonOutput(Output.ALL)
 	byte[] data;
-
 
 	CRUDataParticle() {
 		// For serializer only
