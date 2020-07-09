@@ -15,27 +15,21 @@
  * language governing permissions and limitations under the License.
  */
 
-package com.radixdlt.middleware;
+package com.radixdlt.engine;
 
-import com.radixdlt.atommodel.Atom;
-import com.radixdlt.constraintmachine.CMInstruction;
-import com.radixdlt.engine.RadixEngineAtom;
+import com.radixdlt.atomos.Result;
 
-public final class SimpleRadixEngineAtom implements RadixEngineAtom {
-	private final CMInstruction	cmInstruction;
-	private final Atom atom;
+/**
+ * This module checks for constraints outside of the FSM constraint
+ * machine
+ * @param <T> the type of radix-engine-atom
+ */
+public interface AtomChecker<T extends RadixEngineAtom> {
 
-	public SimpleRadixEngineAtom(Atom atom, CMInstruction cmInstruction) {
-		this.atom = atom;
-		this.cmInstruction = cmInstruction;
-	}
-
-	@Override
-	public CMInstruction getCMInstruction() {
-		return cmInstruction;
-	}
-
-	public Atom getAtom() {
-		return atom;
-	}
+	/**
+	 * Checks that an atom is well-formed
+	 * @param atom the atom to verify
+	 * @return result of the check
+	 */
+	Result check(T atom);
 }

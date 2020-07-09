@@ -19,85 +19,95 @@ package com.radixdlt.atommodel.tokens;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import com.radixdlt.atommodel.tokens.MutableSupplyTokenDefinitionParticle.TokenTransition;
+import com.radixdlt.constraintmachine.Particle;
 import com.radixdlt.identifiers.RRI;
 import com.radixdlt.identifiers.RadixAddress;
-import com.radixdlt.constraintmachine.Particle;
 import com.radixdlt.serialization.DsonOutput;
 import com.radixdlt.serialization.DsonOutput.Output;
 import com.radixdlt.serialization.SerializerId2;
 import com.radixdlt.utils.UInt256;
+
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Particle representing a mutable supply token definition
+ *  A particle which represents an amount of staked fungible tokens
+ *  owned by some key owner, stored in an account and staked to a delegate address.
  */
-@SerializerId2("radix.particles.mutable_supply_token_definition")
-public final class MutableSupplyTokenDefinitionParticle extends Particle {
-	public enum TokenTransition {
-		MINT,
-		BURN
-	}
-
-	@JsonProperty("rri")
+@SerializerId2("radix.particles.staked_tokens")
+public final class StakedTokensParticle extends Particle {
+	@JsonProperty("delegateAddress")
 	@DsonOutput(Output.ALL)
-	private RRI rri;
+	private RadixAddress delegateAddress;
 
-	@JsonProperty("name")
-	@DsonOutput(DsonOutput.Output.ALL)
-	private String name;
+	@JsonProperty("address")
+	@DsonOutput(Output.ALL)
+	private RadixAddress address;
 
-	@JsonProperty("description")
-	@DsonOutput(DsonOutput.Output.ALL)
-	private String	description;
+	@JsonProperty("tokenDefinitionReference")
+	@DsonOutput(Output.ALL)
+	private RRI tokenDefinitionReference;
 
 	@JsonProperty("granularity")
 	@DsonOutput(Output.ALL)
 	private UInt256 granularity;
 
-	@JsonProperty("iconUrl")
-	@DsonOutput(DsonOutput.Output.ALL)
-	private String iconUrl;
-
-	@JsonProperty("url")
+	@JsonProperty("planck")
 	@DsonOutput(Output.ALL)
-	private String url;
+	private long planck;
+
+	@JsonProperty("nonce")
+	@DsonOutput(Output.ALL)
+	private long nonce;
+
+	@JsonProperty("amount")
+	@DsonOutput(Output.ALL)
+	private UInt256 amount;
 
 	private Map<TokenTransition, TokenPermission> tokenPermissions;
 
-	MutableSupplyTokenDefinitionParticle() {
-		// Serializer only
+	public StakedTokensParticle() {
 		super();
+		this.tokenPermissions = ImmutableMap.of();
 	}
 
-	public MutableSupplyTokenDefinitionParticle(
+	public StakedTokensParticle(
+		RadixAddress delegateAddress,
 		RadixAddress address,
-		String symbol,
-		String name,
-		String description,
+		UInt256 amount,
 		UInt256 granularity,
-		String iconUrl,
-		String url,
+		RRI tokenDefinitionReference,
+		long planck,
 		Map<TokenTransition, TokenPermission> tokenPermissions
 	) {
 		super(address.euid());
 
-		this.rri = RRI.of(address, symbol);
-		this.name = name;
-		this.description = description;
+		this.delegateAddress = Objects.requireNonNull(delegateAddress);
+		this.address = Objects.requireNonNull(address);
 		this.granularity = Objects.requireNonNull(granularity);
-		this.iconUrl = iconUrl;
-		this.url = url;
+		this.tokenDefinitionReference = Objects.requireNonNull(tokenDefinitionReference);
+		this.planck = planck;
+		this.nonce = System.nanoTime();
+		this.amount = Objects.requireNonNull(amount);
 		this.tokenPermissions = ImmutableMap.copyOf(tokenPermissions);
-
-		if (this.tokenPermissions.keySet().size() != TokenTransition.values().length) {
-		    throw new IllegalArgumentException("tokenPermissions must be set for all token instance types.");
-		}
 	}
 
-	public RRI getRRI() {
-		return this.rri;
+	public RadixAddress getDelegateAddress() {
+		return delegateAddress;
+	}
+
+	public RadixAddress getAddress() {
+		return this.address;
+	}
+
+	public RRI getTokDefRef() {
+		return this.tokenDefinitionReference;
+	}
+
+	public UInt256 getGranularity() {
+		return this.granularity;
 	}
 
 	public Map<TokenTransition, TokenPermission> getTokenPermissions() {
@@ -105,36 +115,11 @@ public final class MutableSupplyTokenDefinitionParticle extends Particle {
 	}
 
 	public TokenPermission getTokenPermission(TokenTransition transition) {
-		TokenPermission tokenPermission = tokenPermissions.get(transition);
-		if (tokenPermission != null) {
-			return tokenPermission;
-		}
-
-		throw new IllegalArgumentException("No token permission set for " + transition + " in " + tokenPermissions);
-	}
-
-	public String getName() {
-		return this.name;
-	}
-
-	public String getDescription() {
-		return this.description;
-	}
-
-	public UInt256 getGranularity() {
-		return this.granularity;
-	}
-
-	public String getIconUrl() {
-		return this.iconUrl;
-	}
-
-	public String getUrl() {
-		return url;
+		return tokenPermissions.get(transition);
 	}
 
 	@JsonProperty("permissions")
-	@DsonOutput(value = {Output.ALL})
+	@DsonOutput(Output.ALL)
 	private Map<String, String> getJsonPermissions() {
 		return this.tokenPermissions.entrySet().stream()
 			.collect(Collectors.toMap(e -> e.getKey().name().toLowerCase(), e -> e.getValue().name().toLowerCase()));
@@ -157,13 +142,27 @@ public final class MutableSupplyTokenDefinitionParticle extends Particle {
 
 	@Override
 	public String toString() {
-		String tokenPermissionsStr = (tokenPermissions == null)
-			? "null"
-			: tokenPermissions.entrySet().stream()
-				.map(e -> String.format("%s:%s", e.getKey().toString().toLowerCase(), e.getValue().toString().toLowerCase()))
-				.collect(Collectors.joining(","));
-		return String.format("%s[(%s:%s:%s), (am%s), (%s)]", getClass().getSimpleName(),
-			String.valueOf(name), String.valueOf(rri), String.valueOf(granularity),
-			String.valueOf(description), tokenPermissionsStr);
+		return String.format("%s[%s:%s:%s:%s:%s:%s:%s]",
+			getClass().getSimpleName(),
+			tokenDefinitionReference,
+			amount,
+			granularity,
+			address,
+			delegateAddress,
+			planck,
+			nonce
+		);
+	}
+
+	public UInt256 getAmount() {
+		return this.amount;
+	}
+
+	public long getPlanck() {
+		return this.planck;
+	}
+
+	public long getNonce() {
+		return this.nonce;
 	}
 }
