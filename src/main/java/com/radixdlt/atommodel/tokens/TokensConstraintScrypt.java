@@ -28,6 +28,7 @@ import com.radixdlt.atomos.SysCalls;
 import com.radixdlt.atomos.ConstraintScrypt;
 import com.radixdlt.atomos.Result;
 import com.radixdlt.atommodel.routines.CreateFungibleTransitionRoutine;
+import com.radixdlt.constraintmachine.Particle;
 import com.radixdlt.constraintmachine.TransitionProcedure;
 import com.radixdlt.constraintmachine.TransitionToken;
 import com.radixdlt.constraintmachine.UsedCompute;
@@ -262,16 +263,22 @@ public class TokensConstraintScrypt implements ConstraintScrypt {
 		}
 	}
 
-	private static final class CreateStakingTransitionRoutine implements ConstraintRoutine {
-		private final BiFunction<TransferrableTokensParticle, StakedTokensParticle, Result> transition;
-		private final WitnessValidator<TransferrableTokensParticle> inputWitnessValidator;
+	private static final class CreateStakingTransitionRoutine<T extends Particle> implements ConstraintRoutine {
+		private final Function<T, UInt256> inputAmountMapper;
+		private final BiFunction<T, StakedTokensParticle, Result> transition;
+		private final WitnessValidator<T> inputWitnessValidator;
 		private final WitnessValidator<StakedTokensParticle> outputWitnessValidator;
+		private final Class<T> inputClass;
 
 		private CreateStakingTransitionRoutine(
-			BiFunction<TransferrableTokensParticle, StakedTokensParticle, Result> transition,
-			WitnessValidator<TransferrableTokensParticle> inputWitnessValidator,
+			Class<T> inputClass,
+			Function<T, UInt256> inputAmountMapper,
+			BiFunction<T, StakedTokensParticle, Result> transition,
+			WitnessValidator<T> inputWitnessValidator,
 			WitnessValidator<StakedTokensParticle> outputWitnessValidator
 		) {
+			this.inputClass = Objects.requireNonNull(inputClass);
+			this.inputAmountMapper = Objects.requireNonNull(inputAmountMapper);
 			this.transition = Objects.requireNonNull(transition);
 			this.inputWitnessValidator = Objects.requireNonNull(inputWitnessValidator);
 			this.outputWitnessValidator = Objects.requireNonNull(outputWitnessValidator);
@@ -293,7 +300,7 @@ public class TokensConstraintScrypt implements ConstraintScrypt {
 			// -> StakedTokens(amount), void, StakedAmount(amount)
 			createStakeCheckTransition(calls);
 			// nx
-			// TransferrableTokens(transferred), void, StakedAmount
+			// T(transferred), void, StakedAmount
 			// -> StakedTokens(remaining), [UsedAmount(remaining)],  [StakedAmount(remaining-transferred)]
 			createStakeFundTransition(calls);
 		}
@@ -409,19 +416,19 @@ public class TokensConstraintScrypt implements ConstraintScrypt {
 			// TransferrableTokens(transferred), void, StakedAmount
 			// -> StakedTokens(remaining), [UsedAmount(remaining)],  [StakedAmount(remaining-transferred)]
 			calls.createTransition(
-				new TransitionToken<>(TransferrableTokensParticle.class, TypeToken.of(VoidUsedData.class),
+				new TransitionToken<>(inputClass, TypeToken.of(VoidUsedData.class),
 					StakedTokensParticle.class, TypeToken.of(StakedAmount.class)),
-				new TransitionProcedure<TransferrableTokensParticle, VoidUsedData, StakedTokensParticle, StakedAmount>() {
+				new TransitionProcedure<T, VoidUsedData, StakedTokensParticle, StakedAmount>() {
 					@Override
-					public Result precondition(TransferrableTokensParticle inputParticle, VoidUsedData inputUsed,
+					public Result precondition(T inputParticle, VoidUsedData inputUsed,
 					                           StakedTokensParticle outputParticle, StakedAmount outputUsed) {
 						return transition.apply(inputParticle, outputParticle);
 					}
 
 					@Override
-					public UsedCompute<TransferrableTokensParticle, VoidUsedData, StakedTokensParticle, StakedAmount> inputUsedCompute() {
+					public UsedCompute<T, VoidUsedData, StakedTokensParticle, StakedAmount> inputUsedCompute() {
 						return (inputParticle, inputUsed, outputParticle, outputUsed) -> {
-							final UInt256 inputAmount = inputParticle.getAmount();
+							final UInt256 inputAmount = inputAmountMapper.apply(inputParticle);
 							final UInt256 remainingOutputAmount = outputUsed.getAmount();
 							int compare = inputAmount.compareTo(remainingOutputAmount);
 							if (compare > 0) {
@@ -433,9 +440,9 @@ public class TokensConstraintScrypt implements ConstraintScrypt {
 					}
 
 					@Override
-					public UsedCompute<TransferrableTokensParticle, VoidUsedData, StakedTokensParticle, StakedAmount> outputUsedCompute() {
+					public UsedCompute<T, VoidUsedData, StakedTokensParticle, StakedAmount> outputUsedCompute() {
 						return (inputParticle, inputUsed, outputParticle, outputUsed) -> {
-							final UInt256 inputAmount = inputParticle.getAmount();
+							final UInt256 inputAmount = inputAmountMapper.apply(inputParticle);
 							final UInt256 remainingOutputAmount = outputUsed.getAmount();
 							int compare = inputAmount.compareTo(remainingOutputAmount);
 							if (compare < 0) {
@@ -448,7 +455,7 @@ public class TokensConstraintScrypt implements ConstraintScrypt {
 					}
 
 					@Override
-					public WitnessValidator<TransferrableTokensParticle> inputWitnessValidator() {
+					public WitnessValidator<T> inputWitnessValidator() {
 						return inputWitnessValidator;
 					}
 
@@ -463,12 +470,30 @@ public class TokensConstraintScrypt implements ConstraintScrypt {
 
 	private void defineStaking(SysCalls os) {
 		// Staking
-		os.executeRoutine(new CreateStakingTransitionRoutine(
+		os.executeRoutine(new CreateStakingTransitionRoutine<>(
+			TransferrableTokensParticle.class,
+			TransferrableTokensParticle::getAmount,
 			checkEquals(
 				TransferrableTokensParticle::getGranularity,
 				StakedTokensParticle::getGranularity,
 				"Granularities not equal.",
 				TransferrableTokensParticle::getTokenPermissions,
+				StakedTokensParticle::getTokenPermissions,
+				"Permissions not equal."
+			),
+			(in, meta) -> checkSignedBy(meta, in.getAddress()),
+			(out, meta) -> checkSignedBy(meta, out.getAddress())
+		));
+
+		// Restaking
+		os.executeRoutine(new CreateStakingTransitionRoutine<>(
+			StakedTokensParticle.class,
+			StakedTokensParticle::getAmount,
+			checkEquals(
+				StakedTokensParticle::getGranularity,
+				StakedTokensParticle::getGranularity,
+				"Granularities not equal.",
+				StakedTokensParticle::getTokenPermissions,
 				StakedTokensParticle::getTokenPermissions,
 				"Permissions not equal."
 			),
