@@ -1,3 +1,9 @@
+# IMPORTANT
+This repository has been archived as part of our move to a monorepo.
+
+- [Monorepo is here](https://github.com/radixdlt/radixdlt)
+- The code for this repo is available in the `radixdlt-engine` subdirectory of the monorepo.
+
 # radix-engine-library
 
 radix-engine-library is an engine for a real-time, distributed state machine.
